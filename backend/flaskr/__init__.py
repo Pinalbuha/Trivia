@@ -4,6 +4,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import random
 
+from sqlalchemy.sql.functions import sysdate
+
 from models import setup_db, Question, Category
 
 QUESTIONS_PER_PAGE = 10
@@ -106,16 +108,25 @@ def create_app(test_config=None):
   @app.route('/questions/<int:id>', methods=['DELETE'])
   def delete_question(id):
     try:
+            # get question by id, use one_or_none to only turn one result
+            # or call exception if none selected
       question = Question.query.filter_by(id=id).one_or_none()
+
+            # abort if question not found
       if question is None:
-        abort(404)
-        question.delete()
-        return jsonify({
-          'success' : True,
-          'deleted' : id
-        })
+          abort(404)
+
+            # delete and return success message
+      question.delete()
+
+      return jsonify({
+                'success': True,
+                'deleted': id
+            })
     except:
+            # abort if there's a problem deleting the question
       abort(422)
+
 
   '''
   @TODO: 
@@ -127,18 +138,17 @@ def create_app(test_config=None):
   the form will clear and the question will appear at the end of the last page
   of the questions list in the "List" tab.  
   '''
-  @app.route('/questions', methods=['POST'])
+  @app.route("/questions", methods=['POST'])
   def add_question():
     body = request.get_json()
+    
+    new_question = body.get('question', None)
+    new_answer = body.get('answer', None)
+    new_category = body.get('category', None)
+    new_difficulty = body.get('difficulty', None)
     try:
-      new_question = body.get('question', None)
-      new_answer = body.get('answer', None)
-      new_category = body.get('category', None)
-      new_difficulty = body.get('difficulty', None)
-      question = Question(question=new_question,
-                          answer=new_answer, 
-                          category=new_category,
-                          difficulty=new_difficulty)
+
+      question = Question(question=new_question,answer=new_answer, category=new_category, difficulty=new_difficulty)
       question.insert()
 
       selection = Question.query.order_by(Question.id).all()
@@ -151,7 +161,7 @@ def create_app(test_config=None):
         'total_questions': len(Question.query.all())
       })
 
-    except BaseException:
+    except:
       abort(422)
   '''
   @TODO: 
@@ -168,8 +178,9 @@ def create_app(test_config=None):
     body = request.get_json()
     search_term = body.get('searchTerm', None)
     try:
-      search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
-      return jsonify({
+      if search_term:
+        search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
+        return jsonify({
         'success': True,
         'questions': paginate_questions(request, search_results),
         'total_questions': len(search_results),
