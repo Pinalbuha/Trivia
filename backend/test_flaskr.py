@@ -56,9 +56,10 @@ class TriviaTestCase(unittest.TestCase):
         res = self.client().get('/questions?page=1000000')
         data=json.loads(res.data)
 
-        self.assertEqual(res.status_code, 404)
         self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'Resource not found')
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['message'], "Resource not found")
+        
 
     ##_______________________________________/categories___________________________________##
     def test_get_categories(self):
@@ -128,27 +129,26 @@ class TriviaTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 422)
         self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'],"unprocessable")
+        self.assertEqual(data['message'],"Unprocessable entity")
 
 ##_______________________________________/search___________________________________##
 
     def test_search_question(self):
         response = self.client().post('/questions/search', json={
-            'searchTerm': 'palace'})
+            'searchTerm': 'what'})
         data = json.loads(response.data)
 
-        self.assertEqual(response.status_code, 200)
         self.assertEqual(data['success'], True)
-        self.assertIsNotNone(data['questions'])
-        self.assertIsNotNone(data['total_questions'])
+        self.assertTrue(data['questions'])
+        self.assertTrue(data['total_questions'])
 
     def test_404_search_questions(self):
-        response = self.client().post('/questions/search', json={'searchTerm': ''})
+        response = self.client().post('/questions/search', json={'searchTerm': 'xyz'})
         data = json.loads(response.data)
 
-        self.assertEqual(response.status_code, 404)
         self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], "resource not found")
+        self.assertEqual(data['error'],404)
+        self.assertEqual(data['message'], "Resource not found")
 ##_______________________________________ get questions ___________________________________##
 
     def test_get_questions_by_category(self):
@@ -166,9 +166,9 @@ class TriviaTestCase(unittest.TestCase):
         res = self.client().get('/categories/1444/questions')
         data = json.loads(res.data)
 
-        self.assertEqual(res.status_code, 422)
+        self.assertEqual(res.status_code, 400)
         self.assertEqual(data["success"], False)
-        self.assertEqual(data["message"], "Unprocessable entity")
+        self.assertEqual(data["message"], "Bad request error")
 
 ##_______________________________________quizzes ___________________________________##
 
