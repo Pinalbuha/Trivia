@@ -20,6 +20,9 @@ def paginate_questions(request, selection):
 
   return current_questions
 
+
+
+
 def create_app(test_config=None):
   # create and configure the app
   app = Flask(__name__)
@@ -71,33 +74,28 @@ def create_app(test_config=None):
   ten questions per page and pagination at the bottom of the screen for three pages.
   Clicking on the page numbers should update the questions. 
   '''
-  @app.route("/questions", methods=["GET"])
-  def retrieve_questions():
-    try:
-      questions = Question.query.order_by(Question.id).all()
-      current_questions = paginate_questions(request, questions)
+  @app.route("/questions")
+  def get_questions():
+    selection = Question.query.all()
+    total_questions = len(selection)
+    current_questions = paginate_questions(request, selection)
 
-      if len(current_questions) == 0:
+    categories = Category.query.all()
+    categories_dict = {}
+    for category in categories:
+        categories_dict[category.id] = category.type
+
+    if (len(current_questions) == 0):
         abort(404)
 
-      categories = Category.query.all()
-      formatted_categories = {}
+    return jsonify({
+        'success': True,
+        'questions': current_questions,
+        'total_questions': total_questions,
+        'categories': categories_dict
+    })
 
-      for category in categories:
-        formatted_categories[category.id] = category.type
-
-      return jsonify(
-          {
-              "success": True,
-              "questions": current_questions,
-              "total_questions": len(Question.query.all()),
-              "current_category": formatted_categories[category.id],
-              "categories": formatted_categories,
-          }
-      )
-
-    except:
-        abort(404)
+   
   '''
   @TODO: 
   Create an endpoint to DELETE question using a question ID. 
@@ -108,15 +106,11 @@ def create_app(test_config=None):
   @app.route('/questions/<int:id>', methods=['DELETE'])
   def delete_question(id):
     try:
-            # get question by id, use one_or_none to only turn one result
-            # or call exception if none selected
       question = Question.query.filter_by(id=id).one_or_none()
 
-            # abort if question not found
       if question is None:
           abort(404)
 
-            # delete and return success message
       question.delete()
 
       return jsonify({
@@ -124,9 +118,7 @@ def create_app(test_config=None):
                 'deleted': id
             })
     except:
-            # abort if there's a problem deleting the question
       abort(422)
-
 
   '''
   @TODO: 
@@ -142,11 +134,11 @@ def create_app(test_config=None):
   def add_question():
     body = request.get_json()
     
-    new_question = body.get('question', None)
-    new_answer = body.get('answer', None)
-    new_category = body.get('category', None)
-    new_difficulty = body.get('difficulty', None)
     try:
+      new_question = body.get('question', None)
+      new_answer = body.get('answer', None)
+      new_category = body.get('category', None)
+      new_difficulty = body.get('difficulty', None)
 
       question = Question(question=new_question,answer=new_answer, category=new_category, difficulty=new_difficulty)
       question.insert()
@@ -173,21 +165,25 @@ def create_app(test_config=None):
   only question that include that string within their question. 
   Try using the word "title" to start. 
   '''
-  @app.route('/questions/search', methods=['POST'])
+  @app.route('/questions/search', methods=['GET','POST'])
   def search_questions():
-    body = request.get_json()
-    search_term = body.get('searchTerm', None)
-    try:
-      if search_term:
-        search_results = Question.query.filter(Question.question.ilike(f'%{search_term}%')).all()
-        return jsonify({
-        'success': True,
-        'questions': paginate_questions(request, search_results),
-        'total_questions': len(search_results),
-        'current_category': None,
-      })
-    except:
+    data = request.get_json()
+
+    if(data['searchTerm']):
+      search_term = data['searchTerm']
+
+    related_questions = Question.query.filter(Question.question.ilike('%{}%'.format(search_term))).all()
+    
+    if related_questions==[]:
       abort(404)
+
+    output = paginate_questions(request, related_questions)
+
+    return jsonify({
+      'success': True,
+      'questions': output,
+      'total_questions': len(related_questions)
+    })
       
   '''
   @TODO: 
@@ -197,26 +193,22 @@ def create_app(test_config=None):
   categories in the left column will cause only questions of that 
   category to be shown. 
   '''
-  @app.route('/categories/<int:category_id>/questions', methods=['GET'])
-  def get_questions_by_category(category_id):
-   
-    try:
-      category = Category.query.filter(Category.id == category_id).one_or_none()
+  @app.route('/categories/<int:id>/questions', methods=['GET'])
+  def get_questions_by_category(id):
+    category = Category.query.filter_by(id=id).one_or_none()
 
-      selection = Question.query.order_by(Question.id).all()
-      current_questions = paginate_questions(request, selection)
-      if len(current_questions) == 0:
-                    abort(404)
-      else:
-        return jsonify({
-                        'success': True,
-                        'questions': current_questions,
-                        'total_questions': len(selection),
-                        'current_category': category.format()
-                    })
-    except:
-      abort(422)
+    if (category is None):
+            abort(400)
+    selection = Question.query.filter_by(category=category.id).all()
 
+    paginated = paginate_questions(request, selection)
+
+    return jsonify({
+            'success': True,
+            'questions': paginated,
+            'total_questions': len(Question.query.all()),
+            'current_category': category.type
+        })
 
   '''
   @TODO: 
