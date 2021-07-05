@@ -46,21 +46,18 @@ class TriviaTestCase(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
+        self.assertTrue(data['questions'])
         self.assertTrue(data['total_questions'])
-        self.assertTrue(len(data['questions']), 10)
         self.assertTrue(data['categories'])
-
-
+        
     def test_404_sent_requesting_questions_beyond_vaild_page(self): 
-
         res = self.client().get('/questions?page=1000000')
         data=json.loads(res.data)
 
-        self.assertEqual(data['success'], False)
         self.assertEqual(res.status_code, 404)
-        self.assertEqual(data['message'], "Resource not found")
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Resource not found')
         
-
     ##_______________________________________/categories___________________________________##
     def test_get_categories(self):
         res = self.client().get('/categories') 
@@ -81,8 +78,6 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['message'], 'Resource not found')
 
     ##_______________________________________/Delete Questions ___________________________________##
-   
-    
     def test_delete_question(self):
         question = Question(question="is a test?",
                             answer='yes',
@@ -104,7 +99,6 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['deleted'], q_id)
         self.assertTrue(len(questions_before) - len(questions_after) == 1)
         self.assertEqual(question, None)
-
 
 ##_______________________________________create questions___________________________________##
 
@@ -187,12 +181,8 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
         self.assertTrue(data['question'])
-
-        # Ensures previous questions are not returned
         self.assertNotEqual(data['question']['id'], 5)
         self.assertNotEqual(data['question']['id'], 9)
-
-        # Ensures returned question is in the correct category
         self.assertEqual(data['question']['category'], 4)
 
     def test_404_play_quiz(self):
@@ -203,7 +193,6 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 404)
         self.assertEqual(data["success"], False)
         self.assertEqual(data["message"], "Resource not found")
-
 
 # Make the tests conveniently executable
 if __name__ == "__main__":
